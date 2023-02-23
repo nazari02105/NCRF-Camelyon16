@@ -96,6 +96,8 @@ class GridImageDataset(Dataset):
                 label_grid[y_idx, x_idx] = label
 
         img = Image.open(os.path.join(self._data_path, '{}.png'.format(idx)))
+        img = img.convert("L")
+        img = img.convert("RGB")
 
         # color jitter
         img = self._color_jitter(img)
