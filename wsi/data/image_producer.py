@@ -3,6 +3,7 @@ import os
 import numpy as np
 from torch.utils.data import Dataset
 from PIL import Image
+import cv2
 
 np.random.seed(0)
 
@@ -115,6 +116,11 @@ class GridImageDataset(Dataset):
         # PIL image:   H x W x C
         # torch image: C X H X W
         img = np.array(img, dtype=np.float32).transpose((2, 0, 1))
+        img = np.array(img, dtype=np.uint8).transpose(1, 2, 0)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        ret, th = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        img = cv2.cvtColor(th, cv2.COLOR_GRAY2BGR)
+        img = np.array(img, dtype=np.float32).transpose(2, 0, 1)
 
         if self._normalize:
             img = (img - 128.0)/128.0
