@@ -22,9 +22,12 @@ class BasicBlock(nn.Module):
         super(BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = nn.BatchNorm2d(planes)
+        self.dropout1 = nn.Dropout2d(0.2)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
+        self.conv2_temp = conv3x3(planes, planes)
         self.bn2 = nn.BatchNorm2d(planes)
+        self.dropout2 = nn.Dropout2d(0.3)
         self.downsample = downsample
         self.stride = stride
 
@@ -33,10 +36,13 @@ class BasicBlock(nn.Module):
 
         out = self.conv1(x)
         out = self.bn1(out)
+        out = self.dropout1(out)
         out = self.relu(out)
 
         out = self.conv2(out)
+        out = self.conv2_temp(out)
         out = self.bn2(out)
+        out = self.dropout2(out)
 
         if self.downsample is not None:
             residual = self.downsample(x)
@@ -111,7 +117,9 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AvgPool2d(7, stride=1)
-        self.fc = nn.Linear(512 * block.expansion, num_classes)
+        self.fc = nn.Linear(512 * block.expansion, 256)
+        self.fc2 = nn.Linear(256, 64)
+        self.fc3 = nn.Linear(64, num_classes)
         self.crf = CRF(num_nodes) if use_crf else None
 
         for m in self.modules():
@@ -169,6 +177,8 @@ class ResNet(nn.Module):
         # feats means features, i.e. patch embeddings from ResNet
         feats = x.view(x.size(0), -1)
         logits = self.fc(feats)
+        logits = self.fc2(logits)
+        logits = self.fc3(logits)
 
         # restore grid_size dimension for CRF
         feats = feats.view((batch_size, grid_size, -1))
