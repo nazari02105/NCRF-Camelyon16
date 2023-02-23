@@ -51,7 +51,7 @@ def get_probs_map(model, dataloader):
     count = 0
     time_now = time.time()
     for (data, x_mask, y_mask) in dataloader:
-        data = Variable(data.cuda(async=True), volatile=True)
+        data = Variable(data, volatile=True)
         output = model(data)
         # because of torch.squeeze at the end of forward in resnet.py, if the
         # len of dim_0 (batch_size) of data is 1, then output removes this dim.
