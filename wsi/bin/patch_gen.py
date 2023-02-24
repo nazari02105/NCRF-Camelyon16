@@ -28,7 +28,7 @@ parser.add_argument('--num_process', default=1, type=int,
 count = Value('i', 0)
 lock = Lock()
 
-counter = 0
+counter = -1
 
 
 def process(opts):
