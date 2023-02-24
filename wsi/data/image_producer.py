@@ -116,11 +116,7 @@ class GridImageDataset(Dataset):
         # torch image: C X H X W
         img = np.array(img, dtype=np.uint8)
 
-        gamma = 1.4
-        lookUpTable = np.empty((1, 256), np.uint8)
-        for i in range(256):
-            lookUpTable[0, i] = np.clip(pow(i / 255.0, gamma) * 255.0, 0, 255)
-        img = cv2.LUT(img, lookUpTable)
+        img = cv2.equalizeHist(img)
 
         if self._normalize:
             img = (img - 128.0)/128.0
