@@ -38,14 +38,14 @@ def train_epoch(summary, summary_writer, cfg, model, loss_fn, optimizer,
                 dataloader_tumor, dataloader_normal):
     model.train()
 
-    steps = len(dataloader_tumor)
+    steps = len(dataloader_tumor) if len(dataloader_tumor) < len(dataloader_normal) else len(dataloader_normal)
     batch_size = dataloader_tumor.batch_size
     grid_size = dataloader_tumor.dataset._grid_size
     dataiter_tumor = iter(dataloader_tumor)
     dataiter_normal = iter(dataloader_normal)
 
     time_now = time.time()
-    for step in range(steps):
+    for step in range(steps-1):
         data_tumor, target_tumor = next(dataiter_tumor)
         data_tumor = Variable(data_tumor)
         target_tumor = Variable(target_tumor)
@@ -98,7 +98,7 @@ def valid_epoch(summary, cfg, model, loss_fn,
                 dataloader_tumor, dataloader_normal):
     model.eval()
 
-    steps = len(dataloader_tumor)
+    steps = len(dataloader_tumor) if len(dataloader_tumor) < len(dataloader_normal) else len(dataloader_normal)
     batch_size = dataloader_tumor.batch_size
     grid_size = dataloader_tumor.dataset._grid_size
     dataiter_tumor = iter(dataloader_tumor)
@@ -106,7 +106,7 @@ def valid_epoch(summary, cfg, model, loss_fn,
 
     loss_sum = 0
     acc_sum = 0
-    for step in range(steps):
+    for step in range(steps-1):
         data_tumor, target_tumor = next(dataiter_tumor)
         data_tumor = Variable(data_tumor, volatile=True)
         target_tumor = Variable(target_tumor)
