@@ -195,7 +195,7 @@ class ResNet(nn.Module):
 def resnet18(**kwargs):
     """Constructs a ResNet-18 model.
     """
-    model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
+    model = ResNet(Bottleneck, [2, 2, 2, 2], **kwargs)
 
     return model
 
