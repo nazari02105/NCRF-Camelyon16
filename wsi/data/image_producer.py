@@ -49,12 +49,12 @@ class GridImageDataset(Dataset):
         self._patch_per_side = self._img_size // self._patch_size
         self._grid_size = self._patch_per_side * self._patch_per_side
 
-        self._pids = list(map(lambda x: x.strip('.json'),
+        self._pids = list(map(lambda x: x.strip('.json').lower(),
                               os.listdir(self._json_path)))
 
         self._annotations = {}
         for pid in self._pids:
-            pid_json_path = os.path.join(self._json_path, pid + '.json')
+            pid_json_path = os.path.join(self._json_path, pid.capitalize() + '.json')
             anno = Annotation()
             anno.from_json(pid_json_path)
             self._annotations[pid] = anno
