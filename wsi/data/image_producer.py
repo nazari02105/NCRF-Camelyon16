@@ -116,7 +116,9 @@ class GridImageDataset(Dataset):
         # torch image: C X H X W
         img = np.array(img, dtype=np.uint8)
 
-        img = cv2.equalizeHist(img)
+        # img = cv2.equalizeHist(img)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        img = clahe.apply(img)
 
         if self._normalize:
             img = (img - 128.0)/128.0
