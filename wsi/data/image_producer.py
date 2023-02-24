@@ -4,6 +4,7 @@ import numpy as np
 from torch.utils.data import Dataset
 from PIL import Image
 import cv2
+import copy
 
 np.random.seed(0)
 
@@ -104,11 +105,11 @@ class GridImageDataset(Dataset):
         img = self._color_jitter(img)
 
         if self._augmentation:
-            if idx % 2 == 0:
+            if idx % 3 == 0:
                 # use left_right flip
                 img = img.transpose(Image.FLIP_LEFT_RIGHT)
                 label_grid = np.fliplr(label_grid)
-            elif idx % 2 == 1:
+            elif idx % 3 == 1:
                 # use rotate
                 num_rotate = 1
                 img = img.rotate(90 * num_rotate)
@@ -143,5 +144,19 @@ class GridImageDataset(Dataset):
                 label_flat[idx] = label_grid[x_idx, y_idx]
 
                 idx += 1
+
+        if self._augmentation and idx % 3 == 2:
+            first_list = [0, 1, 2, 3]
+            second_list = [8, 7, 6, 5]
+            for i in range(len(first_list)):
+                size = img_flat[0].shape[1]
+                first_number = first_list[i]
+                second_number = second_list[i]
+                temp = copy.deepcopy(img_flat[first_number])
+                img_flat[first_number][:, int(1 / 8 * size):int(7 / 8 * size), int(1 / 8 * size):int(7 / 8 * size)] = \
+                img_flat[second_number][:, int(1 / 8 * size):int(7 / 8 * size), int(1 / 8 * size):int(7 / 8 * size)]
+                img_flat[second_number][:, int(1 / 8 * size):int(7 / 8 * size), int(1 / 8 * size):int(7 / 8 * size)] = \
+                    temp[:, int(1 / 8 * size):int(7 / 8 * size), int(1 / 8 * size):int(7 / 8 * size)]
+                label_flat[first_number], label_flat[second_number] = label_flat[second_number], label_flat[first_number]
 
         return (img_flat, label_flat)
