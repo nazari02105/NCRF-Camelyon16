@@ -67,8 +67,13 @@ def run(args):
         opts_list.append((i, pid, x_center, y_center, args))
     infile.close()
 
+    new_opts_list = list()
+    for i in range(len(opts_list)):
+        if opts_list[i][1] == "Tumor_001" or opts_list[i][1] == "Normal_001" or opts_list[i][1] == "Normal_141" or \
+                opts_list[i][1] == "Tumor_101":
+            new_opts_list.append(opts_list[i])
     pool = Pool(processes=args.num_process)
-    pool.map(process, opts_list)
+    pool.map(process, new_opts_list)
 
 
 def main():
