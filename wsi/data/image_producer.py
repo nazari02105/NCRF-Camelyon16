@@ -117,17 +117,13 @@ class GridImageDataset(Dataset):
         # torch image: C X H X W
         img = np.array(img, dtype=np.float32).transpose((2, 0, 1))
         img = np.array(img, dtype=np.uint8).transpose(1, 2, 0)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        ret, th = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        img = cv2.cvtColor(th, cv2.COLOR_GRAY2BGR)
-        img = np.array(img, dtype=np.float32).transpose(2, 0, 1)
 
         gamma = 1.4
         lookUpTable = np.empty((1, 256), np.uint8)
         for i in range(256):
             lookUpTable[0, i] = np.clip(pow(i / 255.0, gamma) * 255.0, 0, 255)
         img = cv2.LUT(img, lookUpTable)
-
+        
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         ret, th = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         img = cv2.cvtColor(th, cv2.COLOR_GRAY2BGR)
