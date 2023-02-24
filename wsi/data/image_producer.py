@@ -18,7 +18,7 @@ class GridImageDataset(Dataset):
     corresponding labels from pre-sampled images.
     """
     def __init__(self, data_path, json_path, img_size, patch_size,
-                 crop_size=224, normalize=True):
+                 crop_size=224, normalize=True, augmentation=False):
         """
         Initialize the data producer.
 
@@ -38,6 +38,7 @@ class GridImageDataset(Dataset):
         self._patch_size = patch_size
         self._crop_size = crop_size
         self._normalize = normalize
+        self._augmentation = augmentation
         self._color_jitter = transforms.ColorJitter(64.0/255, 0.75, 0.25, 0.04)
         self._preprocess()
 
@@ -102,15 +103,16 @@ class GridImageDataset(Dataset):
         # color jitter
         img = self._color_jitter(img)
 
-        # use left_right flip
-        if np.random.rand() > 0.5:
-            img = img.transpose(Image.FLIP_LEFT_RIGHT)
-            label_grid = np.fliplr(label_grid)
-
-        # use rotate
-        num_rotate = np.random.randint(0, 4)
-        img = img.rotate(90 * num_rotate)
-        label_grid = np.rot90(label_grid, num_rotate)
+        if self._augmentation:
+            if idx % 2 == 0:
+                # use left_right flip
+                img = img.transpose(Image.FLIP_LEFT_RIGHT)
+                label_grid = np.fliplr(label_grid)
+            elif idx % 2 == 1:
+                # use rotate
+                num_rotate = 1
+                img = img.rotate(90 * num_rotate)
+                label_grid = np.rot90(label_grid, num_rotate)
 
         # PIL image:   H x W x C
         # torch image: C X H X W

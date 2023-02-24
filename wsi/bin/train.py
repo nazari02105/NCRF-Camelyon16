@@ -44,45 +44,44 @@ def train_epoch(summary, summary_writer, cfg, model, loss_fn, optimizer,
     dataiter_normal = iter(dataloader_normal)
 
     time_now = time.time()
-    for step in range(steps-2):
+    for step in range(steps-1):
         data_tumor, target_tumor = next(dataiter_tumor)
 
         data_normal, target_normal = next(dataiter_normal)
 
-        if step % 2 == 0:
-            idx_rand = torch.randperm(batch_size * 2)
+        idx_rand = torch.randperm(batch_size * 2)
 
-            data = torch.cat([data_tumor, data_normal])[idx_rand]
-            target = torch.cat([target_tumor, target_normal])[idx_rand]
-            output = model(data)
-            loss_fn = loss_fn.cuda()
-            output = output.cuda()
-            target = target.cuda()
-            loss = loss_fn(output, target)
+        data = torch.cat([data_tumor, data_normal])[idx_rand]
+        target = torch.cat([target_tumor, target_normal])[idx_rand]
+        output = model(data)
+        loss_fn = loss_fn.cuda()
+        output = output.cuda()
+        target = target.cuda()
+        loss = loss_fn(output, target)
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-            probs = output.sigmoid()
-            predicts = (probs >= 0.5).type(torch.cuda.FloatTensor)
-            acc_data = (predicts == target).type(torch.cuda.FloatTensor).sum().item() * 1.0 / (batch_size * grid_size * 2)
-            loss_data = loss.item()
+        probs = output.sigmoid()
+        predicts = (probs >= 0.5).type(torch.cuda.FloatTensor)
+        acc_data = (predicts == target).type(torch.cuda.FloatTensor).sum().item() * 1.0 / (batch_size * grid_size * 2)
+        loss_data = loss.item()
 
-            time_spent = time.time() - time_now
-            time_now = time.time()
-            logging.info(
-                '{}, Epoch : {}, Step : {}, Training Loss : {:.5f}, '
-                'Training Acc : {:.3f}, Run Time : {:.2f}'
-                .format(
-                    time.strftime("%Y-%m-%d %H:%M:%S"), summary['epoch'] + 1,
-                    summary['step'] + 1, loss_data, acc_data, time_spent))
+        time_spent = time.time() - time_now
+        time_now = time.time()
+        logging.info(
+            '{}, Epoch : {}, Step : {}, Training Loss : {:.5f}, '
+            'Training Acc : {:.3f}, Run Time : {:.2f}'
+            .format(
+                time.strftime("%Y-%m-%d %H:%M:%S"), summary['epoch'] + 1,
+                summary['step'] + 1, loss_data, acc_data, time_spent))
 
-            summary['step'] += 1
+        summary['step'] += 1
 
-            if summary['step'] % cfg['log_every'] == 0:
-                summary_writer.add_scalar('train/loss', loss_data, summary['step'])
-                summary_writer.add_scalar('train/acc', acc_data, summary['step'])
+        if summary['step'] % cfg['log_every'] == 0:
+            summary_writer.add_scalar('train/loss', loss_data, summary['step'])
+            summary_writer.add_scalar('train/acc', acc_data, summary['step'])
 
     summary['epoch'] += 1
 
@@ -101,31 +100,30 @@ def valid_epoch(summary, cfg, model, loss_fn,
 
     loss_sum = 0
     acc_sum = 0
-    for step in range(steps-2):
+    for step in range(steps-1):
         with torch.no_grad():
             data_tumor, target_tumor = next(dataiter_tumor)
 
             data_normal, target_normal = next(dataiter_normal)
 
-            if step % 2 == 0:
-                data = torch.cat([data_tumor, data_normal])
-                target = torch.cat([target_tumor, target_normal])
-                output = model(data)
-                loss_fn = loss_fn.cuda()
-                output = output.cuda()
-                target = target.cuda()
-                loss = loss_fn(output, target)
+            data = torch.cat([data_tumor, data_normal])
+            target = torch.cat([target_tumor, target_normal])
+            output = model(data)
+            loss_fn = loss_fn.cuda()
+            output = output.cuda()
+            target = target.cuda()
+            loss = loss_fn(output, target)
 
-                probs = output.sigmoid()
-                predicts = (probs >= 0.5).type(torch.cuda.FloatTensor)
-                acc_data = (predicts == target).type(torch.cuda.FloatTensor).sum().item() * 1.0 / (batch_size * grid_size * 2)
-                loss_data = loss.item()
+            probs = output.sigmoid()
+            predicts = (probs >= 0.5).type(torch.cuda.FloatTensor)
+            acc_data = (predicts == target).type(torch.cuda.FloatTensor).sum().item() * 1.0 / (batch_size * grid_size * 2)
+            loss_data = loss.item()
 
-                loss_sum += loss_data
-                acc_sum += acc_data
+            loss_sum += loss_data
+            acc_sum += acc_data
 
-    summary['loss'] = loss_sum / (steps / 2)
-    summary['acc'] = acc_sum / (steps / 2)
+    summary['loss'] = loss_sum / steps
+    summary['acc'] = acc_sum / steps
 
     return summary
 
@@ -168,18 +166,29 @@ def run(args):
                                             cfg['image_size'],
                                             cfg['patch_size'],
                                             crop_size=cfg['crop_size'])
+    # for augmentation
+    dataset_tumor_train_augmentation = GridImageDataset(cfg['data_path_tumor_train'],
+                                                        cfg['json_path_train'],
+                                                        cfg['image_size'],
+                                                        cfg['patch_size'],
+                                                        crop_size=cfg['crop_size'],
+                                                        augmentation=True)
+    dataset_normal_train_augmentation = GridImageDataset(cfg['data_path_normal_train'],
+                                                         cfg['json_path_train'],
+                                                         cfg['image_size'],
+                                                         cfg['patch_size'],
+                                                         crop_size=cfg['crop_size'],
+                                                         augmentation=True)
     dataset_tumor_valid = GridImageDataset(cfg['data_path_tumor_valid'],
                                            cfg['json_path_valid'],
                                            cfg['image_size'],
                                            cfg['patch_size'],
-                                           crop_size=cfg['crop_size'],
-                                           train_valid="valid")
+                                           crop_size=cfg['crop_size'])
     dataset_normal_valid = GridImageDataset(cfg['data_path_normal_valid'],
                                             cfg['json_path_valid'],
                                             cfg['image_size'],
                                             cfg['patch_size'],
-                                            crop_size=cfg['crop_size'],
-                                            train_valid="valid")
+                                            crop_size=cfg['crop_size'])
 
     dataloader_tumor_train = DataLoader(dataset_tumor_train,
                                         batch_size=batch_size_train,
@@ -187,6 +196,12 @@ def run(args):
     dataloader_normal_train = DataLoader(dataset_normal_train,
                                          batch_size=batch_size_train,
                                          num_workers=num_workers)
+    dataloader_tumor_train_augmentation = DataLoader(dataset_tumor_train_augmentation,
+                                                     batch_size=batch_size_train,
+                                                     num_workers=num_workers)
+    dataloader_normal_train_augmentation = DataLoader(dataset_normal_train_augmentation,
+                                                      batch_size=batch_size_train,
+                                                      num_workers=num_workers)
     dataloader_tumor_valid = DataLoader(dataset_tumor_valid,
                                         batch_size=batch_size_valid,
                                         num_workers=num_workers)
@@ -203,6 +218,11 @@ def run(args):
                                     loss_fn, optimizer,
                                     dataloader_tumor_train,
                                     dataloader_normal_train)
+        summary_train['epoch'] -= 1
+        summary_train = train_epoch(summary_train, summary_writer, cfg, model,
+                                    loss_fn, optimizer,
+                                    dataloader_tumor_train_augmentation,
+                                    dataloader_normal_train_augmentation)
         torch.save({'epoch': summary_train['epoch'],
                     'step': summary_train['step'],
                     'state_dict': model.module.state_dict()},
