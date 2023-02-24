@@ -1,5 +1,5 @@
 {
- "model": "resnet18",
+ "model": "resnet34",
  "use_crf": true,
  "batch_size": 10,
  "image_size": 768,
