@@ -18,7 +18,7 @@ class GridImageDataset(Dataset):
     corresponding labels from pre-sampled images.
     """
     def __init__(self, data_path, json_path, img_size, patch_size,
-                 crop_size=224, normalize=True, train_valid="train"):
+                 crop_size=224, normalize=True):
         """
         Initialize the data producer.
 
@@ -38,7 +38,6 @@ class GridImageDataset(Dataset):
         self._patch_size = patch_size
         self._crop_size = crop_size
         self._normalize = normalize
-        self._train_valid = train_valid
         self._color_jitter = transforms.ColorJitter(64.0/255, 0.75, 0.25, 0.04)
         self._preprocess()
 
@@ -71,99 +70,80 @@ class GridImageDataset(Dataset):
         self._num_image = len(self._coords)
 
     def __len__(self):
-        return self._num_image * 2
+        return self._num_image
 
     def __getitem__(self, idx):
-        rem = idx % 2
-        idx = idx // 2
-        if rem == 0:
-            pid, x_center, y_center = self._coords[idx]
+        pid, x_center, y_center = self._coords[idx]
 
-            x_top_left = int(x_center - self._img_size / 2)
-            y_top_left = int(y_center - self._img_size / 2)
+        x_top_left = int(x_center - self._img_size / 2)
+        y_top_left = int(y_center - self._img_size / 2)
 
-            # the grid of labels for each patch
-            label_grid = np.zeros((self._patch_per_side, self._patch_per_side),
-                                  dtype=np.float32)
-            for x_idx in range(self._patch_per_side):
-                for y_idx in range(self._patch_per_side):
-                    # (x, y) is the center of each patch
-                    x = x_top_left + int((x_idx + 0.5) * self._patch_size)
-                    y = y_top_left + int((y_idx + 0.5) * self._patch_size)
+        # the grid of labels for each patch
+        label_grid = np.zeros((self._patch_per_side, self._patch_per_side),
+                              dtype=np.float32)
+        for x_idx in range(self._patch_per_side):
+            for y_idx in range(self._patch_per_side):
+                # (x, y) is the center of each patch
+                x = x_top_left + int((x_idx + 0.5) * self._patch_size)
+                y = y_top_left + int((y_idx + 0.5) * self._patch_size)
 
-                    if self._annotations[pid].inside_polygons((x, y), True):
-                        label = 1
-                    else:
-                        label = 0
-
-                    # extracted images from WSI is transposed with respect to
-                    # the original WSI (x, y)
-                    label_grid[y_idx, x_idx] = label
-
-            img = Image.open(os.path.join(self._data_path, '{}.png'.format(idx)))
-            img = img.convert("L")
-            img = img.convert("RGB")
-
-            # color jitter
-            img = self._color_jitter(img)
-
-            # use left_right flip
-            if np.random.rand() > 0.5:
-                img = img.transpose(Image.FLIP_LEFT_RIGHT)
-                label_grid = np.fliplr(label_grid)
-
-            # use rotate
-            num_rotate = np.random.randint(0, 4)
-            img = img.rotate(90 * num_rotate)
-            label_grid = np.rot90(label_grid, num_rotate)
-
-            # PIL image:   H x W x C
-            # torch image: C X H X W
-            img = np.array(img, dtype=np.float32).transpose((2, 0, 1))
-            img = np.array(img, dtype=np.uint8).transpose(1, 2, 0)
-
-            gamma = 1.4
-            lookUpTable = np.empty((1, 256), np.uint8)
-            for i in range(256):
-                lookUpTable[0, i] = np.clip(pow(i / 255.0, gamma) * 255.0, 0, 255)
-            img = cv2.LUT(img, lookUpTable)
-
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            ret, th = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-            if rem == 1:
-                kernel = np.ones((3, 3), np.uint8)
-                if np.random.rand() > 0.5:
-                    th = cv2.morphologyEx(th, cv2.MORPH_OPEN, kernel)
+                if self._annotations[pid].inside_polygons((x, y), True):
+                    label = 1
                 else:
-                    th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
+                    label = 0
 
-            # img = cv2.cvtColor(th, cv2.COLOR_GRAY2BGR)
-            # img = np.array(img, dtype=np.float32).transpose(2, 0, 1)
+                # extracted images from WSI is transposed with respect to
+                # the original WSI (x, y)
+                label_grid[y_idx, x_idx] = label
 
-            if self._normalize:
-                img = (img - 128.0)/128.0
+        img = Image.open(os.path.join(self._data_path, '{}.png'.format(idx)))
+        img = img.convert("L")
 
-            # flatten the square grid
-            img_flat = np.zeros(
-                (self._grid_size, 1, self._crop_size, self._crop_size),
-                dtype=np.float32)
-            label_flat = np.zeros(self._grid_size, dtype=np.float32)
+        # color jitter
+        img = self._color_jitter(img)
 
-            idx = 0
-            for x_idx in range(self._patch_per_side):
-                for y_idx in range(self._patch_per_side):
-                    # center crop each patch
-                    x_start = int(
-                        (x_idx + 0.5) * self._patch_size - self._crop_size / 2)
-                    x_end = x_start + self._crop_size
-                    y_start = int(
-                        (y_idx + 0.5) * self._patch_size - self._crop_size / 2)
-                    y_end = y_start + self._crop_size
-                    img_flat[idx] = img[x_start:x_end, y_start:y_end]
-                    label_flat[idx] = label_grid[x_idx, y_idx]
+        # use left_right flip
+        if np.random.rand() > 0.5:
+            img = img.transpose(Image.FLIP_LEFT_RIGHT)
+            label_grid = np.fliplr(label_grid)
 
-                    idx += 1
+        # use rotate
+        num_rotate = np.random.randint(0, 4)
+        img = img.rotate(90 * num_rotate)
+        label_grid = np.rot90(label_grid, num_rotate)
 
-            return img_flat, label_flat
-        return np.asarray([]), np.asarray([])
+        # PIL image:   H x W x C
+        # torch image: C X H X W
+        img = np.array(img, dtype=np.uint8)
+
+        gamma = 1.4
+        lookUpTable = np.empty((1, 256), np.uint8)
+        for i in range(256):
+            lookUpTable[0, i] = np.clip(pow(i / 255.0, gamma) * 255.0, 0, 255)
+        img = cv2.LUT(img, lookUpTable)
+
+        if self._normalize:
+            img = (img - 128.0)/128.0
+
+        # flatten the square grid
+        img_flat = np.zeros(
+            (self._grid_size, 1, self._crop_size, self._crop_size),
+            dtype=np.float32)
+        label_flat = np.zeros(self._grid_size, dtype=np.float32)
+
+        idx = 0
+        for x_idx in range(self._patch_per_side):
+            for y_idx in range(self._patch_per_side):
+                # center crop each patch
+                x_start = int(
+                    (x_idx + 0.5) * self._patch_size - self._crop_size / 2)
+                x_end = x_start + self._crop_size
+                y_start = int(
+                    (y_idx + 0.5) * self._patch_size - self._crop_size / 2)
+                y_end = y_start + self._crop_size
+                img_flat[idx] = img[x_start:x_end, y_start:y_end]
+                label_flat[idx] = label_grid[x_idx, y_idx]
+
+                idx += 1
+
+        return (img_flat, label_flat)
