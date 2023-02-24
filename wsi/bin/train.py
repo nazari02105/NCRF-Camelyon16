@@ -123,8 +123,8 @@ def valid_epoch(summary, cfg, model, loss_fn,
                 loss_sum += loss_data
                 acc_sum += acc_data
 
-    summary['loss'] = loss_sum / steps
-    summary['acc'] = acc_sum / steps
+    summary['loss'] = loss_sum / (steps / 2)
+    summary['acc'] = acc_sum / (steps / 2)
 
     return summary
 
@@ -171,12 +171,14 @@ def run(args):
                                            cfg['json_path_valid'],
                                            cfg['image_size'],
                                            cfg['patch_size'],
-                                           crop_size=cfg['crop_size'])
+                                           crop_size=cfg['crop_size'],
+                                           train_valid="valid")
     dataset_normal_valid = GridImageDataset(cfg['data_path_normal_valid'],
                                             cfg['json_path_valid'],
                                             cfg['image_size'],
                                             cfg['patch_size'],
-                                            crop_size=cfg['crop_size'])
+                                            crop_size=cfg['crop_size'],
+                                            train_valid="valid")
 
     dataloader_tumor_train = DataLoader(dataset_tumor_train,
                                         batch_size=batch_size_train,
