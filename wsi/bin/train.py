@@ -7,7 +7,6 @@ import time
 
 import torch
 from torch.utils.data import DataLoader
-from torch.autograd import Variable
 from torch.nn import BCEWithLogitsLoss, DataParallel
 from torch.optim import SGD
 
@@ -47,15 +46,10 @@ def train_epoch(summary, summary_writer, cfg, model, loss_fn, optimizer,
     time_now = time.time()
     for step in range(steps-1):
         data_tumor, target_tumor = next(dataiter_tumor)
-        data_tumor = Variable(data_tumor)
-        target_tumor = Variable(target_tumor)
 
         data_normal, target_normal = next(dataiter_normal)
-        data_normal = Variable(data_normal)
-        target_normal = Variable(target_normal)
 
-        idx_rand = Variable(
-            torch.randperm(batch_size * 2))
+        idx_rand = torch.randperm(batch_size * 2)
 
         data = torch.cat([data_tumor, data_normal])[idx_rand]
         target = torch.cat([target_tumor, target_normal])[idx_rand]
@@ -107,29 +101,26 @@ def valid_epoch(summary, cfg, model, loss_fn,
     loss_sum = 0
     acc_sum = 0
     for step in range(steps-1):
-        data_tumor, target_tumor = next(dataiter_tumor)
-        data_tumor = Variable(data_tumor, volatile=True)
-        target_tumor = Variable(target_tumor)
+        with torch.no_grad():
+            data_tumor, target_tumor = next(dataiter_tumor)
 
-        data_normal, target_normal = next(dataiter_normal)
-        data_normal = Variable(data_normal, volatile=True)
-        target_normal = Variable(target_normal)
+            data_normal, target_normal = next(dataiter_normal)
 
-        data = torch.cat([data_tumor, data_normal])
-        target = torch.cat([target_tumor, target_normal])
-        output = model(data)
-        loss_fn = loss_fn.cuda()
-        output = output.cuda()
-        target = target.cuda()
-        loss = loss_fn(output, target)
+            data = torch.cat([data_tumor, data_normal])
+            target = torch.cat([target_tumor, target_normal])
+            output = model(data)
+            loss_fn = loss_fn.cuda()
+            output = output.cuda()
+            target = target.cuda()
+            loss = loss_fn(output, target)
 
-        probs = output.sigmoid()
-        predicts = (probs >= 0.5).type(torch.cuda.FloatTensor)
-        acc_data = (predicts == target).type(torch.cuda.FloatTensor).sum().item() * 1.0 / (batch_size * grid_size * 2)
-        loss_data = loss.item()
+            probs = output.sigmoid()
+            predicts = (probs >= 0.5).type(torch.cuda.FloatTensor)
+            acc_data = (predicts == target).type(torch.cuda.FloatTensor).sum().item() * 1.0 / (batch_size * grid_size * 2)
+            loss_data = loss.item()
 
-        loss_sum += loss_data
-        acc_sum += acc_data
+            loss_sum += loss_data
+            acc_sum += acc_data
 
     summary['loss'] = loss_sum / steps
     summary['acc'] = acc_sum / steps
@@ -150,7 +141,7 @@ def run(args):
     os.environ["CUDA_VISIBLE_DEVICES"] = args.device_ids
     num_GPU = len(args.device_ids.split(','))
     batch_size_train = cfg['batch_size'] * num_GPU
-    batch_size_valid = cfg['batch_size'] * num_GPU * 2
+    batch_size_valid = cfg['batch_size'] * num_GPU
     num_workers = args.num_workers * num_GPU
 
     if cfg['image_size'] % cfg['patch_size'] != 0:
