@@ -44,7 +44,7 @@ def train_epoch(summary, summary_writer, cfg, model, loss_fn, optimizer,
     dataiter_normal = iter(dataloader_normal)
 
     time_now = time.time()
-    for step in range(steps-1):
+    for step in range(steps-2):
         data_tumor, target_tumor = next(dataiter_tumor)
 
         data_normal, target_normal = next(dataiter_normal)
@@ -100,27 +100,28 @@ def valid_epoch(summary, cfg, model, loss_fn,
 
     loss_sum = 0
     acc_sum = 0
-    for step in range(steps-1):
+    for step in range(steps-2):
         with torch.no_grad():
             data_tumor, target_tumor = next(dataiter_tumor)
 
             data_normal, target_normal = next(dataiter_normal)
 
-            data = torch.cat([data_tumor, data_normal])
-            target = torch.cat([target_tumor, target_normal])
-            output = model(data)
-            loss_fn = loss_fn.cuda()
-            output = output.cuda()
-            target = target.cuda()
-            loss = loss_fn(output, target)
+            if step % 2 == 0:
+                data = torch.cat([data_tumor, data_normal])
+                target = torch.cat([target_tumor, target_normal])
+                output = model(data)
+                loss_fn = loss_fn.cuda()
+                output = output.cuda()
+                target = target.cuda()
+                loss = loss_fn(output, target)
 
-            probs = output.sigmoid()
-            predicts = (probs >= 0.5).type(torch.cuda.FloatTensor)
-            acc_data = (predicts == target).type(torch.cuda.FloatTensor).sum().item() * 1.0 / (batch_size * grid_size * 2)
-            loss_data = loss.item()
+                probs = output.sigmoid()
+                predicts = (probs >= 0.5).type(torch.cuda.FloatTensor)
+                acc_data = (predicts == target).type(torch.cuda.FloatTensor).sum().item() * 1.0 / (batch_size * grid_size * 2)
+                loss_data = loss.item()
 
-            loss_sum += loss_data
-            acc_sum += acc_data
+                loss_sum += loss_data
+                acc_sum += acc_data
 
     summary['loss'] = loss_sum / steps
     summary['acc'] = acc_sum / steps

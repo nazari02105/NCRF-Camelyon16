@@ -70,9 +70,11 @@ class GridImageDataset(Dataset):
         self._num_image = len(self._coords)
 
     def __len__(self):
-        return self._num_image
+        return self._num_image * 2
 
     def __getitem__(self, idx):
+        rem = idx % 2
+        idx = idx // 2
         pid, x_center, y_center = self._coords[idx]
 
         x_top_left = int(x_center - self._img_size / 2)
@@ -126,6 +128,14 @@ class GridImageDataset(Dataset):
         
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         ret, th = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+        if rem == 1:
+            kernel = np.ones((3, 3), np.uint8)
+            if np.random.rand() > 0.5:
+                th = cv2.morphologyEx(th, cv2.MORPH_OPEN, kernel)
+            else:
+                th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel)
+
         img = cv2.cvtColor(th, cv2.COLOR_GRAY2BGR)
         img = np.array(img, dtype=np.float32).transpose(2, 0, 1)
 
