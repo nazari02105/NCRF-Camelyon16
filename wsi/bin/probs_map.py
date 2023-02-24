@@ -35,7 +35,7 @@ parser.add_argument('probs_map_path', default=None, metavar='PROBS_MAP_PATH',
                     type=str, help='Path to the output probs_map numpy file')
 parser.add_argument('--GPU', default='0', type=str, help='which GPU to use'
                     ', default 0')
-parser.add_argument('--num_workers', default=5, type=int, help='number of '
+parser.add_argument('--num_workers', default=0, type=int, help='number of '
                     'workers to use to make batch, default 5')
 parser.add_argument('--eight_avg', default=0, type=int, help='if using average'
                     ' of the 8 direction predictions for each patch,'
