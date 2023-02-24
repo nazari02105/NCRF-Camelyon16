@@ -121,9 +121,6 @@ class GridImageDataset(Dataset):
 
         img = cv2.equalizeHist(img)
 
-        if self._normalize:
-            img = (img - 128.0)/128.0
-
         # flatten the square grid
         img_flat = np.zeros(
             (self._grid_size, 1, self._crop_size, self._crop_size),
@@ -158,5 +155,27 @@ class GridImageDataset(Dataset):
                 img_flat[second_number][:, int(1 / 8 * size):int(7 / 8 * size), int(1 / 8 * size):int(7 / 8 * size)] = \
                     temp[:, int(1 / 8 * size):int(7 / 8 * size), int(1 / 8 * size):int(7 / 8 * size)]
                 label_flat[first_number], label_flat[second_number] = label_flat[second_number], label_flat[first_number]
+
+            # creating mask
+            size = img_flat[0].shape[1]
+            mask = np.zeros((size, size), dtype="uint8")
+            start_point = (int(1 / 8 * size), int(1 / 8 * size))
+            end_point = (int(7 / 8 * size), int(7 / 8 * size))
+            color = (255, 255, 255)
+            thickness = 3
+            mask = cv2.rectangle(mask, start_point, end_point, color, thickness)
+            # adding in painting
+            total_list = first_list + second_list
+            for i in total_list:
+                this_image = copy.deepcopy(img_flat[i])
+                this_image = np.squeeze(this_image)
+                this_image = this_image.astype(np.uint8)
+                res_telea = cv2.inpaint(src=this_image, inpaintMask=mask, inpaintRadius=5, flags=cv2.INPAINT_TELEA)
+                # res_ns = cv2.inpaint(src=this_image, inpaintMask=mask, inpaintRadius=3, flags=cv2.INPAINT_NS)
+                res_telea = res_telea.reshape(1, res_telea.shape[0], res_telea.shape[1])
+                img_flat[i][:, :, :] = res_telea[:, :, :]
+
+        if self._normalize:
+            img_flat = (img_flat - 128.0)/128.0
 
         return (img_flat, label_flat)
