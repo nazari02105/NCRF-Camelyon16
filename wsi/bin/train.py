@@ -49,39 +49,40 @@ def train_epoch(summary, summary_writer, cfg, model, loss_fn, optimizer,
 
         data_normal, target_normal = next(dataiter_normal)
 
-        idx_rand = torch.randperm(batch_size * 2)
+        if step % 2 == 0:
+            idx_rand = torch.randperm(batch_size * 2)
 
-        data = torch.cat([data_tumor, data_normal])[idx_rand]
-        target = torch.cat([target_tumor, target_normal])[idx_rand]
-        output = model(data)
-        loss_fn = loss_fn.cuda()
-        output = output.cuda()
-        target = target.cuda()
-        loss = loss_fn(output, target)
+            data = torch.cat([data_tumor, data_normal])[idx_rand]
+            target = torch.cat([target_tumor, target_normal])[idx_rand]
+            output = model(data)
+            loss_fn = loss_fn.cuda()
+            output = output.cuda()
+            target = target.cuda()
+            loss = loss_fn(output, target)
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-        probs = output.sigmoid()
-        predicts = (probs >= 0.5).type(torch.cuda.FloatTensor)
-        acc_data = (predicts == target).type(torch.cuda.FloatTensor).sum().item() * 1.0 / (batch_size * grid_size * 2)
-        loss_data = loss.item()
+            probs = output.sigmoid()
+            predicts = (probs >= 0.5).type(torch.cuda.FloatTensor)
+            acc_data = (predicts == target).type(torch.cuda.FloatTensor).sum().item() * 1.0 / (batch_size * grid_size * 2)
+            loss_data = loss.item()
 
-        time_spent = time.time() - time_now
-        time_now = time.time()
-        logging.info(
-            '{}, Epoch : {}, Step : {}, Training Loss : {:.5f}, '
-            'Training Acc : {:.3f}, Run Time : {:.2f}'
-            .format(
-                time.strftime("%Y-%m-%d %H:%M:%S"), summary['epoch'] + 1,
-                summary['step'] + 1, loss_data, acc_data, time_spent))
+            time_spent = time.time() - time_now
+            time_now = time.time()
+            logging.info(
+                '{}, Epoch : {}, Step : {}, Training Loss : {:.5f}, '
+                'Training Acc : {:.3f}, Run Time : {:.2f}'
+                .format(
+                    time.strftime("%Y-%m-%d %H:%M:%S"), summary['epoch'] + 1,
+                    summary['step'] + 1, loss_data, acc_data, time_spent))
 
-        summary['step'] += 1
+            summary['step'] += 1
 
-        if summary['step'] % cfg['log_every'] == 0:
-            summary_writer.add_scalar('train/loss', loss_data, summary['step'])
-            summary_writer.add_scalar('train/acc', acc_data, summary['step'])
+            if summary['step'] % cfg['log_every'] == 0:
+                summary_writer.add_scalar('train/loss', loss_data, summary['step'])
+                summary_writer.add_scalar('train/acc', acc_data, summary['step'])
 
     summary['epoch'] += 1
 

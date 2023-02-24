@@ -76,7 +76,7 @@ class GridImageDataset(Dataset):
     def __getitem__(self, idx):
         rem = idx % 2
         idx = idx // 2
-        if self._train_valid == "train" or rem == 0:
+        if rem == 0:
             pid, x_center, y_center = self._coords[idx]
 
             x_top_left = int(x_center - self._img_size / 2)
