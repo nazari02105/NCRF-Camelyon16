@@ -1,0 +1,18 @@
+python ./wsi/bin/patch_gen.py ./WSI_TRAIN ./coords/tumor_train.txt ./PATCHES_TUMOR_TRAIN
+python ./wsi/bin/patch_gen.py ./WSI_TRAIN ./coords/normal_train.txt ./PATCHES_NORMAL_TRAIN
+python ./wsi/bin/patch_gen.py ./WSI_VALID ./coords/tumor_valid.txt ./PATCHES_TUMOR_VALID
+python ./wsi/bin/patch_gen.py ./WSI_VALID ./coords/normal_valid.txt ./PATCHES_NORMAL_VALID
+
+python ./wsi/bin/plot_W.py ./ckpt/resnet18_crf.ckpt
+
+python ./wsi/bin/train.py ./configs/resnet18_crf.json ./SAVED_CKPT
+
+tensorboard --logdir ./SAVED_CKPT
+
+python ./wsi/bin/tissue_mask.py ./WSI_TEST/test_001.tif ./WSI_MASK/test_001.npy
+
+python ./wsi/bin/probs_map.py ./WSI_TEST/test_001.tif ./SAVED_CKPT/best.ckpt ./SAVED_CKPT/cfg.json ./WSI_MASK/test_001.npy ./WSI_PROBS/test_001.npy
+
+python ./wsi/bin/nms.py ./WSI_PROBS/test_001.npy ./NMS_COORDS/test_001.csv
+
+python ./wsi/bin/Evaluation_FROC.py ./EVALUATION_MASK ./NMS_COORDS
