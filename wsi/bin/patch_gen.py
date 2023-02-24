@@ -22,14 +22,18 @@ parser.add_argument('--patch_size', default=768, type=int, help='patch size, '
                     'default 768')
 parser.add_argument('--level', default=0, type=int, help='level for WSI, to '
                     'generate patches, default 0')
-parser.add_argument('--num_process', default=5, type=int,
+parser.add_argument('--num_process', default=1, type=int,
                     help='number of mutli-process, default 5')
 
 count = Value('i', 0)
 lock = Lock()
 
+counter = 0
+
 
 def process(opts):
+    global counter
+    counter += 1
     i, pid, x_center, y_center, args = opts
     x = int(int(x_center) - args.patch_size / 2)
     y = int(int(y_center) - args.patch_size / 2)
@@ -39,7 +43,7 @@ def process(opts):
         (x, y), args.level,
         (args.patch_size, args.patch_size)).convert('RGB')
 
-    img.save(os.path.join(args.patch_path, str(i) + '.png'))
+    img.save(os.path.join(args.patch_path, str(counter) + '.png'))
 
     global lock
     global count
