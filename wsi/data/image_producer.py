@@ -170,10 +170,10 @@ class GridImageDataset(Dataset):
                 this_image = copy.deepcopy(img_flat[i])
                 this_image = np.squeeze(this_image)
                 this_image = this_image.astype(np.uint8)
-                res_telea = cv2.inpaint(src=this_image, inpaintMask=mask, inpaintRadius=5, flags=cv2.INPAINT_TELEA)
-                # res_ns = cv2.inpaint(src=this_image, inpaintMask=mask, inpaintRadius=3, flags=cv2.INPAINT_NS)
-                res_telea = res_telea.reshape(1, res_telea.shape[0], res_telea.shape[1])
-                img_flat[i][:, :, :] = res_telea[:, :, :]
+                # res_telea = cv2.inpaint(src=this_image, inpaintMask=mask, inpaintRadius=5, flags=cv2.INPAINT_TELEA)
+                res_ns = cv2.inpaint(src=this_image, inpaintMask=mask, inpaintRadius=3, flags=cv2.INPAINT_NS)
+                res_ns = res_ns.reshape(1, res_ns.shape[0], res_ns.shape[1])
+                img_flat[i][:, :, :] = res_ns[:, :, :]
 
         if self._normalize:
             img_flat = (img_flat - 128.0)/128.0
